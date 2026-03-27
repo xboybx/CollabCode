@@ -1,6 +1,7 @@
 //Socket file , where we wrap the expresss app unto it to have https methods
 import { Server } from "socket.io";
 import { Server as Httpserver } from "http";
+import { Socket } from "dgram";
 
 export const initializeSocket = (server: Httpserver) => {
     // 1. Initialize the Socket.io server
@@ -26,6 +27,11 @@ export const initializeSocket = (server: Httpserver) => {
     io.on("connection", (socket) => {
         console.log("A VIP guest arrived! We generated their nametag/ID:", socket.id);
 
+        /* 
+        When a user opens the page, your code immediately runs socket.emit("join-room"). This is perfect because we want them to instantly receive text chats and code updates.
+        However, we do not want to automatically turn on their camera the second they open the page. We want to wait until they specifically click the Video icon to open the 
+        VideoBubble
+        .*/
 
         //Join room
         socket.on("join-room", (roomId: string) => {
@@ -40,8 +46,40 @@ export const initializeSocket = (server: Httpserver) => {
             /* Imagine the sockets are the frontend and for that sockets the backend gives uid for that client 
             and when we have a room ,the backend takes that client and puts in the room id sent by the forntend
             */
+
             console.log(`Guest [${socket.id}] entered Room: ${roomId}`);
+
+            // WebRTC: Broadast to all OTHER users that a new user joined.
+            // Existing users will catch this and send a WebRTC Offer.
+            socket.to(roomId).emit('user-connected', socket.id)
+
         })
+
+        //when the users audio and video is ready , he sends that he want to join the room with video
+        socket.on("join-video", (roomId: string, callerName?: string) => {
+
+            console.log(`[💻 SIGNAL] Guest ${socket.id} clicked the Video button in room ${roomId}.`);
+            console.log(`[💻 SIGNAL] Broadcasting 'user-connected-video' to everyone else in the room...`);
+            //Now the server tells eveyone in the room that this users came and wan to join the room
+            socket.to(roomId).emit("user-connected-video", socket.id)
+
+            // Also tell everyone NOT in video that a call has started, so they can show a ringing notification
+            socket.to(roomId).emit("video-call-started", { callerName: callerName || "Someone" });
+        })
+
+        // When a user closes their VideoBubble, tell everyone else in the room the call ended
+        // So they can dismiss any "incoming call" notification they still have open
+        socket.on("leave-video", (roomId: string) => {
+            console.log(`[📵 LEAVE] Guest ${socket.id} left the video call in room ${roomId}.`);
+            socket.to(roomId).emit("video-call-ended");
+        })
+
+        // When a user turns their camera on or off, relay the new state to everyone else in the room
+        // so they can update that person's video tile (show avatar or live video)
+        socket.on("camera-state-change", ({ roomId, isCameraOff }: { roomId: string, isCameraOff: boolean }) => {
+            console.log(`[📷 CAMERA] Guest ${socket.id} turned camera ${isCameraOff ? "OFF" : "ON"} in room ${roomId}`);
+            socket.to(roomId).emit("remote-camera-state", { userId: socket.id, isCameraOff });
+        });
 
 
         //Recieve the message from backend and send to frontend
@@ -55,10 +93,66 @@ export const initializeSocket = (server: Httpserver) => {
         })
 
 
+        //Recieve and broadcast the sync code packets of the editor
         socket.on("send-crdt-packet", ({ roomId, packet }) => {
             //when we recieve the updated code from the frontend Yjs we take it and braodcast to all the users in the room and again the frontend yjs updates its ui
             socket.to(roomId).emit("receive-crdt-packet", packet)
         })
+
+
+        /*
+        =====================================================================
+            WebRTC Matchmaking (Signaling) or WebRtc Handshake
+        =====================================================================
+        What we are building here is called a WebRTC Mesh Network. It inherently supports multiple users (3, 5, 10, etc.) without any extra backend code.
+        Here is exactly why this code works for 5 users:
+        When the 5th user joins the room, the server yells user-connected to the entire room.
+        Because Users 1, 2, 3, and 4 are already in the room, they all hear the user-connected event at the exact same time.
+        User 1 sends an Offer to User 5.
+        User 2 sends an Offer to User 5.
+        User 3 sends an Offer to User 5.
+        User 4 sends an Offer to User 5.
+        User 5 accepts all 4 offers and sends back 4 individual Answers.
+
+         */
+
+        // 2. Forwarding the Offer
+        socket.on("webrtc-offer", ({ offer, to }) => {
+            console.log(`[📫 ROUTER] Forwarding an OFFER from ${socket.id} ----> straight to ${to}`);
+            //to is the person socket id to whom we are sending the offer
+            socket.to(to).emit("webrtc-offer", { offer, from: socket.id })
+
+        })
+
+        // 3. Forwarding the Answer
+        socket.on("webrtc-answer", ({ answer, to }) => {
+            console.log(`[📫 ROUTER] Forwarding an ANSWER from ${socket.id} <---- straight back to ${to}`);
+            socket.to(to).emit("webrtc-answer", { answer, from: socket.id })
+        })
+
+        // 4. Forwarding the Network IP Addresses (ICE Candidates)
+        socket.on("webrtc-ice-candidate", ({ candidate, to }) => {
+            socket.to(to).emit("webrtc-ice-candidate", { candidate, from: socket.id });
+        })
+
+        // 5. Handling Disconnections
+        // This fires right before the socket actually leaves its rooms
+        socket.on("disconnecting", () => {
+            for (const room of socket.rooms) {//socket.rooms is a set wich has room names that the socket belong to ,the first one is always its same id wich is the pivate room
+                if (room != socket.id) {//skipping the provate room and broadcasitng in other rooms the socket is present in
+                    console.log(
+                        `[❌ DISCONNECT] Guest ${socket.id} closed their tab. Telling room ${room} to remove their video.`
+                    );
+                    socket.to(room).emit("user-disconnected", socket.id)
+
+                }
+
+            }
+
+        })
+
+
+
 
         /*
             =====================================================================

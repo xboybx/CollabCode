@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import React from "react";
 import Editor from "@monaco-editor/react";
-import { MessageSquarePlus, Video, Play, LogOut, Home, Wand2, Languages, Book, Users, FileCode2, ChevronRight, Menu } from "lucide-react";
+import { MessageSquarePlus, Video, Play, LogOut, Home, Wand2, Languages, Book, Users, FileCode2, ChevronRight, Menu, Copy, PhoneCall } from "lucide-react";
 
 import ChatSidebar from "@/components/ChatSidebar";
 import VideoBubble from "@/components/VideoBubble";
@@ -32,7 +32,17 @@ export default function RoomEditor() {
 
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isVideoOpen, setIsVideoOpen] = useState(false);
+    const [incomingCall, setIncomingCall] = useState<{ callerName: string } | null>(null);
+    // A ref that always holds the CURRENT value of isVideoOpen.
+    // We need this inside socket listeners because closures capture the
+    // value at the time the effect ran (always false). The ref always
+    // points to the live value so the check is never stale.
+    const isVideoOpenRef = React.useRef(false);
+    // Keep the ref in sync with the state every time isVideoOpen changes.
+    // This is the standard React pattern to read current state inside a stale closure.
+    React.useEffect(() => { isVideoOpenRef.current = isVideoOpen; }, [isVideoOpen]);
     const [language, setLanguage] = useState("javascript");
+    const [isProfileOpen, setIsProfileOpen] = useState(false); // profile dropdown toggle
 
     const [chatWidth, setChatWidth] = useState(380);
     const [editorRef, setEditorRef] = useState<any>(null);
@@ -60,6 +70,75 @@ export default function RoomEditor() {
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
+    // -------------------------------------------------------
+    // Ringtone — Web Audio API (no mp3 file needed).
+    //
+    // WHY NOT HTML5 Audio?
+    //   Browsers block audio from playing unless the user has
+    //   recently clicked something on THAT tab (autoplay policy).
+    //   When a socket event fires on a background tab, no click
+    //   has happened recently, so audio.play() silently fails.
+    //
+    // THE FIX — Pre-unlock the AudioContext:
+    //   We create the AudioContext on the FIRST user click on the page.
+    //   Once created, it stays "unlocked" forever in that session.
+    //   So when the socket event fires later, the context is already
+    //   ready and plays instantly without needing another user gesture.
+    // -------------------------------------------------------
+    const audioCtxRef = React.useRef<AudioContext | null>(null);
+    const ringtoneIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // On first click anywhere on the page, create and resume the AudioContext.
+    // This satisfies the browser's "user gesture" requirement for audio.
+    React.useEffect(() => {
+        const unlock = () => {
+            if (!audioCtxRef.current) {
+                const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+                audioCtxRef.current = new AudioCtx();
+                console.log("[🔊 AUDIO] AudioContext unlocked and ready.");
+            }
+            if (audioCtxRef.current.state === "suspended") {
+                audioCtxRef.current.resume();
+            }
+        };
+        document.addEventListener("click", unlock, { once: true });
+        return () => document.removeEventListener("click", unlock);
+    }, []);
+
+    const playRingtone = () => {
+        // If user never clicked (very rare), create context now
+        if (!audioCtxRef.current) {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            audioCtxRef.current = new AudioCtx();
+        }
+        const ctx = audioCtxRef.current;
+
+        const beep = () => {
+            // Two-tone phone ring: 480Hz + 620Hz simultaneously (classic US phone ring)
+            [480, 620].forEach(freq => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.8);
+            });
+        };
+
+        beep(); // play immediately
+        ringtoneIntervalRef.current = setInterval(beep, 1800); // repeat every 1.8s
+    };
+
+    const stopRingtone = () => {
+        if (ringtoneIntervalRef.current) {
+            clearInterval(ringtoneIntervalRef.current);
+            ringtoneIntervalRef.current = null;
+        }
+    };
+
     //socket io initial connection and message recieving
     useEffect(() => {
         if (!roomId) return;
@@ -75,9 +154,7 @@ export default function RoomEditor() {
             console.log(`sent the room id to backend to add the sockets in it: ${roomId}`);
 
         });
-
         //This use Effect listens for messages from others and shows in the messagebox
-
         socket.on("receive-chat-message", (IncommingMessages: ChatMessage) => {
             //set the imcomming message to the message array to render on the screen
             setMessages(prev => [...prev, IncommingMessages])
@@ -88,12 +165,34 @@ export default function RoomEditor() {
             }
         })
 
+        // Listen for incoming video call from another user in the room
+        socket.on("video-call-started", ({ callerName }: { callerName: string }) => {
+            // Use the REF (not the state) to get the real current value.
+            // isVideoOpen state inside this closure is frozen at false (stale closure).
+            // isVideoOpenRef.current is always the live up-to-date value.
+            if (!isVideoOpenRef.current) {
+                console.log(`[📞 INCOMING] ${callerName} started a video call!`);
+                setIncomingCall({ callerName });
+                playRingtone();
+            }
+        });
+
+        // When the other user leaves the video call, dismiss our notification
+        socket.on("video-call-ended", () => {
+            console.log("[📵 CALL ENDED] The other user left the call. Dismissing notification.");
+            stopRingtone();
+            setIncomingCall(null);
+        });
+
         socket.on("disconnect", () => {
             console.log("Disconnected from server.");
         });
 
         return () => {
             socket.off("receive-chat-message");
+            socket.off("video-call-started");
+            socket.off("video-call-ended");
+            stopRingtone();
             socket.disconnect();
         };
         /* 
@@ -162,12 +261,19 @@ export default function RoomEditor() {
                             <div className="w-3 h-3 rounded-full bg-green-500/90 border border-green-500/50 shadow-sm"></div>
                         </div>
 
-                        {/* Tab-styled Room indicator */}
-                        <div className="flex items-center gap-2 bg-[#1a1c29]/90 border-t border-x border-[#1a1c29] rounded-t-lg px-4 py-2 mt-2 h-[calc(100%-8px)] shadow-[0_-2px_10px_rgba(0,0,0,0.2)]">
+                        {/* Tab-styled Room indicator — shows full ID, click to copy */}
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(roomId);
+                                alert("Room ID copied!");
+                            }}
+                            title="Click to copy full Room ID"
+                            className="flex items-center gap-2 bg-[#1a1c29]/90 border-t border-x border-[#1a1c29] rounded-t-lg px-4 py-2 mt-2 h-[calc(100%-8px)] shadow-[0_-2px_10px_rgba(0,0,0,0.2)] hover:bg-white/5 transition-colors group"
+                        >
                             <FileCode2 size={13} className="text-[#b1ff00]" />
-                            <span className="text-xs text-gray-300 font-medium tracking-wide">Room: {roomId.substring(0, 8)}</span>
-                            <div className="w-2 h-2 ml-2 rounded-full bg-white/20 hover:bg-white/50 cursor-pointer transition-colors" />
-                        </div>
+                            <span className="text-xs text-gray-300 font-mono tracking-wider">{roomId}</span>
+                            <Copy size={11} className="text-gray-500 group-hover:text-[#b1ff00] transition-colors ml-1" />
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -207,14 +313,42 @@ export default function RoomEditor() {
                             </button>
                         </div>
 
-                        {/* Settings User / Logout */}
-                        <button
-                            onClick={() => signOut({ callbackUrl: "/login" })}
-                            className="w-6 h-6 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 flex items-center justify-center text-[10px] font-bold hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30 transition-all"
-                            title="Sign Out"
-                        >
-                            {session?.user?.name?.charAt(0) || "U"}
-                        </button>
+                        {/* Profile Avatar — click to open profile modal */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="w-7 h-7 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center justify-center text-[11px] font-bold hover:bg-yellow-500/30 transition-all ring-2 ring-transparent hover:ring-yellow-500/40"
+                                title="Profile"
+                            >
+                                {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                            </button>
+
+                            {/* Profile Dropdown Modal */}
+                            {isProfileOpen && (
+                                <div className="absolute right-0 top-10 w-64 bg-[#12141f]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl z-50 p-4 flex flex-col gap-3">
+                                    {/* Avatar + Name */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 flex items-center justify-center text-lg font-bold shrink-0">
+                                            {session?.user?.name?.charAt(0).toUpperCase() || "U"}
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-semibold text-white truncate">{session?.user?.name || "User"}</span>
+                                            <span className="text-[11px] text-gray-400 truncate">{session?.user?.email || ""}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="h-px bg-white/10" />
+
+                                    {/* Sign Out */}
+                                    <button
+                                        onClick={() => signOut({ callbackUrl: "/login" })}
+                                        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all font-medium"
+                                    >
+                                        Sign Out
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -285,7 +419,55 @@ export default function RoomEditor() {
                 </div>
             </div>
             {isChatOpen && <ChatSidebar socket={socketRef} roomId={roomId} chatWidth={chatWidth} startResizing={startResizing} onClose={() => setIsChatOpen(false)} messages={messages} setMessages={setMessages} />}
-            {isVideoOpen && <VideoBubble onClose={() => setIsVideoOpen(false)} />}
+            {isVideoOpen && <VideoBubble
+                onClose={() => {
+                    // Tell everyone else in the room that the call ended
+                    // so they can dismiss any pending "incoming call" notification
+                    if (socketRef) socketRef.emit("leave-video", roomId);
+                    setIsVideoOpen(false);
+                }}
+                socket={socketRef}
+                roomId={roomId}
+            />}
+
+            {/* ── INCOMING VIDEO CALL NOTIFICATION ── */}
+            {incomingCall && !isVideoOpen && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-[#0f1020]/95 backdrop-blur-xl border border-[#b1ff00]/30 shadow-[0_0_40px_rgba(177,255,0,0.15)] animate-bounce-subtle">
+                    {/* Blinking ring icon */}
+                    <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[#b1ff00]/10 border border-[#b1ff00]/30">
+                        <PhoneCall size={18} className="text-[#b1ff00] animate-pulse" />
+                        <span className="absolute inset-0 rounded-full border border-[#b1ff00]/40 animate-ping" />
+                    </div>
+
+                    <div className="flex flex-col">
+                        <span className="text-[11px] text-gray-400 font-medium">Incoming video call</span>
+                        <span className="text-sm text-white font-semibold">{incomingCall.callerName} is calling...</span>
+                    </div>
+
+                    {/* Join button */}
+                    <button
+                        onClick={() => {
+                            stopRingtone();
+                            setIncomingCall(null);
+                            setIsVideoOpen(true);
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-[#b1ff00] text-black text-xs font-bold hover:bg-[#c8ff33] transition-all"
+                    >
+                        Join
+                    </button>
+
+                    {/* Dismiss button */}
+                    <button
+                        onClick={() => {
+                            stopRingtone();
+                            setIncomingCall(null);
+                        }}
+                        className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-semibold hover:text-white hover:bg-white/10 transition-all"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
