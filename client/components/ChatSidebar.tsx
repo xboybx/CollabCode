@@ -18,9 +18,10 @@ interface ChatSidebarProps {
   roomId: string;  // Accepting the Room Bucket!
   messages: ChatMessage[];
   setMessages: any;
+  isOpen: boolean; // Controls the slide animation
 }
 
-export default function ChatSidebar({ chatWidth, startResizing, onClose, socket, roomId, messages, setMessages }: ChatSidebarProps) {
+export default function ChatSidebar({ chatWidth, startResizing, onClose, socket, roomId, messages, setMessages, isOpen }: ChatSidebarProps) {
   const { data: session } = useSession();
   const userName = session?.user?.name || "Developer";
 
@@ -51,8 +52,12 @@ export default function ChatSidebar({ chatWidth, startResizing, onClose, socket,
 
   return (
     <div
-      className="h-full flex flex-col bg-[#0b0d19]/60 backdrop-blur-2xl shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.7)] z-20 relative border-l border-white/5"
-      style={{ width: `${chatWidth}px` }}
+      className="h-full flex flex-col bg-[#0b0d19]/60 backdrop-blur-2xl shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.7)] z-20 relative border-l border-white/5 transition-all duration-300 ease-in-out"
+      style={{ 
+          width: `${chatWidth}px`,
+          marginRight: isOpen ? '0px' : `-${chatWidth}px`,
+          opacity: isOpen ? 1 : 0,
+      }}
     >
       <div onMouseDown={startResizing} className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary z-50 transition-colors" />
 

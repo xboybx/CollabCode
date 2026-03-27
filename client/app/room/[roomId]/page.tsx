@@ -11,6 +11,9 @@ import { MessageSquarePlus, Video, Play, LogOut, Home, Wand2, Languages, Book, U
 import ChatSidebar from "@/components/ChatSidebar";
 import VideoBubble from "@/components/VideoBubble";
 import * as Y from "yjs";
+import { useRingtone } from "@/hooks/useRingtone";
+import { setupCursorStyles } from "@/hooks/useCursorStyles";
+import { setupCursorObserver } from "@/hooks/useCursorObserver";
 
 
 interface ChatMessage {
@@ -47,6 +50,11 @@ export default function RoomEditor() {
     const [chatWidth, setChatWidth] = useState(380);
     const [editorRef, setEditorRef] = useState<any>(null);
 
+    /* To show the memeberst inside the room and we take this data from yjs awareness */
+    const [members, setMembers] = useState<any[]>([]);
+    const [isMembersOpen, setIsMembersOpen] = useState(false);
+
+
     //resizing call back of chat width
     const startResizing = React.useCallback((mouseDownEvent: React.MouseEvent) => {
         const startWidth = chatWidth;
@@ -70,74 +78,7 @@ export default function RoomEditor() {
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
-    // -------------------------------------------------------
-    // Ringtone — Web Audio API (no mp3 file needed).
-    //
-    // WHY NOT HTML5 Audio?
-    //   Browsers block audio from playing unless the user has
-    //   recently clicked something on THAT tab (autoplay policy).
-    //   When a socket event fires on a background tab, no click
-    //   has happened recently, so audio.play() silently fails.
-    //
-    // THE FIX — Pre-unlock the AudioContext:
-    //   We create the AudioContext on the FIRST user click on the page.
-    //   Once created, it stays "unlocked" forever in that session.
-    //   So when the socket event fires later, the context is already
-    //   ready and plays instantly without needing another user gesture.
-    // -------------------------------------------------------
-    const audioCtxRef = React.useRef<AudioContext | null>(null);
-    const ringtoneIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-
-    // On first click anywhere on the page, create and resume the AudioContext.
-    // This satisfies the browser's "user gesture" requirement for audio.
-    React.useEffect(() => {
-        const unlock = () => {
-            if (!audioCtxRef.current) {
-                const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-                audioCtxRef.current = new AudioCtx();
-                console.log("[🔊 AUDIO] AudioContext unlocked and ready.");
-            }
-            if (audioCtxRef.current.state === "suspended") {
-                audioCtxRef.current.resume();
-            }
-        };
-        document.addEventListener("click", unlock, { once: true });
-        return () => document.removeEventListener("click", unlock);
-    }, []);
-
-    const playRingtone = () => {
-        // If user never clicked (very rare), create context now
-        if (!audioCtxRef.current) {
-            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-            audioCtxRef.current = new AudioCtx();
-        }
-        const ctx = audioCtxRef.current;
-
-        const beep = () => {
-            // Two-tone phone ring: 480Hz + 620Hz simultaneously (classic US phone ring)
-            [480, 620].forEach(freq => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.8);
-            });
-        };
-
-        beep(); // play immediately
-        ringtoneIntervalRef.current = setInterval(beep, 1800); // repeat every 1.8s
-    };
-
-    const stopRingtone = () => {
-        if (ringtoneIntervalRef.current) {
-            clearInterval(ringtoneIntervalRef.current);
-            ringtoneIntervalRef.current = null;
-        }
-    };
+    const { playRingtone, stopRingtone } = useRingtone();
 
     //socket io initial connection and message recieving
     useEffect(() => {
@@ -171,7 +112,6 @@ export default function RoomEditor() {
             // isVideoOpen state inside this closure is frozen at false (stale closure).
             // isVideoOpenRef.current is always the live up-to-date value.
             if (!isVideoOpenRef.current) {
-                console.log(`[📞 INCOMING] ${callerName} started a video call!`);
                 setIncomingCall({ callerName });
                 playRingtone();
             }
@@ -179,10 +119,11 @@ export default function RoomEditor() {
 
         // When the other user leaves the video call, dismiss our notification
         socket.on("video-call-ended", () => {
-            console.log("[📵 CALL ENDED] The other user left the call. Dismissing notification.");
             stopRingtone();
             setIncomingCall(null);
         });
+
+
 
         socket.on("disconnect", () => {
             console.log("Disconnected from server.");
@@ -206,18 +147,41 @@ export default function RoomEditor() {
     useEffect(() => {
         //only Run if socketpipe and the editor is exists
         if (!socketRef || !editorRef) return;
+
         // 1. Create a raw Yjs Brain
         const ydoc = new Y.Doc();
+
         // 2. Extract a specific textbook from the brain to track text
         const ytext = ydoc.getText("monaco");
         const { MonacoBinding } = require("y-monaco");
+        const { Awareness, encodeAwarenessUpdate, applyAwarenessUpdate } = require("y-protocols/awareness");
+
+        // --AWARENESS PROTOCOL (CURSORS & SELECTIONS) ---
+        const awareness = new Awareness(ydoc);
+
+        // Generate a random neon color for this user
+        const cursorColors = ["#b1ff00", "#FF0055", "#00E5FF", "#FFB800", "#B200FF", "#00FF66"];
+        const myColor = cursorColors[Math.floor(Math.random() * cursorColors.length)]
+
+        // Set our local state (Name + Color)
+        awareness.setLocalStateField("user", {
+            name: session?.user?.name || "Guest",
+            color: myColor,
+        });
+
+        // Use our helpers to handle dynamic CSS and name-tag stamping
+        const cleanupStyles = setupCursorStyles(awareness, ydoc.clientID);
+        const cleanupObserver = setupCursorObserver(awareness, ydoc.clientID);
 
         // 3. The Anchor: Chain the textbook mathematically to the Editor Body
         const binding = new MonacoBinding(
             ytext,
             editorRef.getModel(),
-            new Set([editorRef])
+            new Set([editorRef]),
+            awareness
         );
+
+
         // 4. Local Sender: When YOU physically type a key, Yjs calculates the Math Delta
         //what happens when i type
         ydoc.on("update", (updateData: Uint8Array, origin: any) => {
@@ -237,10 +201,51 @@ export default function RoomEditor() {
             Y.applyUpdate(ydoc, rawBinary, "server");
         });
 
+
+        // --- SYNC CURSORS (AWARENESS) ---
+        // When your cursor moves, this fires. We broadcast the movement binary.
+        awareness.on("update", (changes: any, origin: any) => {
+            // Only broadcast if WE moved our cursor locally
+            if (origin != "server") {
+                const awarenessUpdate = encodeAwarenessUpdate(
+                    awareness, [ydoc.clientID]
+                );
+
+                socketRef.emit("send-cursor-awareness", { roomId, packet: Array.from(awarenessUpdate) })
+            }
+        })
+
+        // When your friend's cursor moves, we inject it into our awareness state.
+        // Monaco automatically sees this and draws their colored cursor!
+        socketRef.on("receive-cursor-awareness", (incomingPacket: number[]) => {
+            const rawBinary = new Uint8Array(incomingPacket);
+            applyAwarenessUpdate(awareness, rawBinary, "server");
+        })
+
+        //To extract the members in the room to show in the ui
+        const updateMembers = () => {
+            const states = Array.from(awareness.getStates().values())//gets users in the from of array
+            const userList = states.map((s: any) => s.user).filter(Boolean)
+            setMembers(userList)
+        }
+
+        awareness.on("change", updateMembers)
+        updateMembers()
+
         return () => {
             socketRef.off("receive-crdt-packet");
-            binding.destroy();
-            ydoc.destroy();
+            socketRef.off("receive-cursor-awareness");
+            cleanupStyles();
+            cleanupObserver();
+
+            try {
+                if (binding) binding.destroy();
+                if (awareness) awareness.destroy();
+                if (ydoc) ydoc.destroy();
+            } catch (error) {
+                // Ignore Yjs dev warnings during React StrictMode / HMR unmounts
+                console.log("Cleaned up editor bindings.");
+            }
         }
 
     }, [socketRef, editorRef, roomId])
@@ -275,8 +280,53 @@ export default function RoomEditor() {
                             <Copy size={11} className="text-gray-500 group-hover:text-[#b1ff00] transition-colors ml-1" />
                         </button>
                     </div>
-
                     <div className="flex items-center gap-3">
+                        {/* Wrapper for Members Button and Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsMembersOpen(!isMembersOpen)}
+                                className="flex items-center gap-1.5 bg-[#b1ff00] hover:bg-[#c4ff33] text-black px-4 py-1.5 rounded text-[11px] font-bold tracking-wider transition-all shadow-[0_0_15px_rgba(177,255,0,0.2)]"
+                                title="Room members"
+                            >
+                                <Users size={12} strokeWidth={3} />
+                                Members - {members?.length || 0}
+                            </button>
+
+                            {isMembersOpen && (
+                                <>
+                                    {/* Backdrop for easy closing */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsMembersOpen(false)} />
+
+                                    <div className="absolute left-0 mt-3 w-72 bg-[#12141f]/95 backdrop-blur-2xl border border-white/10 rounded-xl shadow-2xl z-50 p-4 flex flex-col gap-3 animate-in fade-in zoom-in duration-200">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">Room Members</div>
+                                        <div className="flex flex-col gap-3 max-h-80 overflow-y-auto no-scrollbar">
+                                            {members.map((member: any, idx: number) => (
+                                                <div key={idx} className="group">
+                                                    <div className="flex items-center gap-3 p-1 rounded-lg transition-colors">
+                                                        <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-lg font-bold shrink-0 shadow-inner"
+                                                            style={{
+                                                                color: member?.color,
+                                                                backgroundColor: `${member?.color}15`
+                                                            }}>
+                                                            {member?.name?.charAt(0).toUpperCase() || "U"}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-sm font-semibold text-white truncate" style={{ color: member?.color }}>
+                                                                {member?.name || "Anonymous"}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 font-mono opacity-60">Active Client</span>
+                                                        </div>
+                                                    </div>
+                                                    {idx < members.length - 1 && <div className="h-px bg-white/5 mt-2 mx-1" />}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+
                         {/* "Invite" style Share button */}
                         <button
                             onClick={() => {
@@ -418,56 +468,60 @@ export default function RoomEditor() {
                     </div>
                 </div>
             </div>
-            {isChatOpen && <ChatSidebar socket={socketRef} roomId={roomId} chatWidth={chatWidth} startResizing={startResizing} onClose={() => setIsChatOpen(false)} messages={messages} setMessages={setMessages} />}
-            {isVideoOpen && <VideoBubble
-                onClose={() => {
-                    // Tell everyone else in the room that the call ended
-                    // so they can dismiss any pending "incoming call" notification
-                    if (socketRef) socketRef.emit("leave-video", roomId);
-                    setIsVideoOpen(false);
-                }}
-                socket={socketRef}
-                roomId={roomId}
-            />}
+            <ChatSidebar isOpen={isChatOpen} socket={socketRef} roomId={roomId} chatWidth={chatWidth} startResizing={startResizing} onClose={() => setIsChatOpen(false)} messages={messages} setMessages={setMessages} />
+            {
+                isVideoOpen && <VideoBubble
+                    onClose={() => {
+                        // Tell everyone else in the room that the call ended
+                        // so they can dismiss any pending "incoming call" notification
+                        if (socketRef) socketRef.emit("leave-video", roomId);
+                        setIsVideoOpen(false);
+                    }}
+                    socket={socketRef}
+                    roomId={roomId}
+                />
+            }
 
             {/* ── INCOMING VIDEO CALL NOTIFICATION ── */}
-            {incomingCall && !isVideoOpen && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-[#0f1020]/95 backdrop-blur-xl border border-[#b1ff00]/30 shadow-[0_0_40px_rgba(177,255,0,0.15)] animate-bounce-subtle">
-                    {/* Blinking ring icon */}
-                    <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[#b1ff00]/10 border border-[#b1ff00]/30">
-                        <PhoneCall size={18} className="text-[#b1ff00] animate-pulse" />
-                        <span className="absolute inset-0 rounded-full border border-[#b1ff00]/40 animate-ping" />
+            {
+                incomingCall && !isVideoOpen && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-4 px-5 py-3.5 rounded-2xl bg-[#0f1020]/95 backdrop-blur-xl border border-[#b1ff00]/30 shadow-[0_0_40px_rgba(177,255,0,0.15)] animate-bounce-subtle">
+                        {/* Blinking ring icon */}
+                        <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-[#b1ff00]/10 border border-[#b1ff00]/30">
+                            <PhoneCall size={18} className="text-[#b1ff00] animate-pulse" />
+                            <span className="absolute inset-0 rounded-full border border-[#b1ff00]/40 animate-ping" />
+                        </div>
+
+                        <div className="flex flex-col">
+                            <span className="text-[11px] text-gray-400 font-medium">Incoming video call</span>
+                            <span className="text-sm text-white font-semibold">{incomingCall.callerName} is calling...</span>
+                        </div>
+
+                        {/* Join button */}
+                        <button
+                            onClick={() => {
+                                stopRingtone();
+                                setIncomingCall(null);
+                                setIsVideoOpen(true);
+                            }}
+                            className="px-4 py-1.5 rounded-lg bg-[#b1ff00] text-black text-xs font-bold hover:bg-[#c8ff33] transition-all"
+                        >
+                            Join
+                        </button>
+
+                        {/* Dismiss button */}
+                        <button
+                            onClick={() => {
+                                stopRingtone();
+                                setIncomingCall(null);
+                            }}
+                            className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-semibold hover:text-white hover:bg-white/10 transition-all"
+                        >
+                            Dismiss
+                        </button>
                     </div>
-
-                    <div className="flex flex-col">
-                        <span className="text-[11px] text-gray-400 font-medium">Incoming video call</span>
-                        <span className="text-sm text-white font-semibold">{incomingCall.callerName} is calling...</span>
-                    </div>
-
-                    {/* Join button */}
-                    <button
-                        onClick={() => {
-                            stopRingtone();
-                            setIncomingCall(null);
-                            setIsVideoOpen(true);
-                        }}
-                        className="px-4 py-1.5 rounded-lg bg-[#b1ff00] text-black text-xs font-bold hover:bg-[#c8ff33] transition-all"
-                    >
-                        Join
-                    </button>
-
-                    {/* Dismiss button */}
-                    <button
-                        onClick={() => {
-                            stopRingtone();
-                            setIncomingCall(null);
-                        }}
-                        className="px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-xs font-semibold hover:text-white hover:bg-white/10 transition-all"
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
