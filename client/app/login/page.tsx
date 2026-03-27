@@ -53,10 +53,10 @@ export default function Login() {
             <Code2 size={24} className="text-primary" />
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            Sync Space
+            CollabCode
           </h1>
           <p className="text-text-muted text-sm font-medium">
-            Log in to your collaborative workspace.
+            Log in to your account
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function Login() {
             className="group relative w-full overflow-hidden py-4 bg-primary hover:bg-primary-hover text-black font-bold rounded-xl transition-all disabled:opacity-50 shadow-[0_4px_20px_rgba(177,255,0,0.2)] active:scale-[0.98] mt-2"
           >
             <div className="relative z-10 flex items-center justify-center gap-2">
-              {loading ? "Verifying..." : "Enter Workspace"}
+              {loading ? "Verifying..." : "Login"}
             </div>
             {/* Glossy Overlay */}
             <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -130,9 +130,9 @@ export default function Login() {
         </button>
 
         <p className="text-center text-xs font-semibold text-text-muted">
-          New to Sync Space?{" "}
+          No account?{" "}
           <a href="/register" className="text-primary hover:text-primary-hover hover:underline transition-all">
-            Join Launchpad
+            Register first
           </a>
         </p>
       </div>

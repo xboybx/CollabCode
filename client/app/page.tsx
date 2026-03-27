@@ -43,8 +43,8 @@ export default function Dashboard() {
               <Code2 size={24} className="text-primary" />
             </div>
             <div className="flex flex-col items-start translate-y-0.5">
-              <h1 className="text-xl font-black tracking-tighter text-white leading-none">SYNC SPACE</h1>
-              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Launchpad v1.0</span>
+              <h1 className="text-xl font-black tracking-tighter text-white leading-none">COLLABCODE</h1>
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Workspace v1.0</span>
             </div>
           </div>
           <button

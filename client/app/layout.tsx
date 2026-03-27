@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sync Space | Collaborative Code Editor",
+  title: "CollabCode | Collaborative Code Editor",
   description: "Real-time collaborative code editor with video chat and shared workspace.",
 };
 

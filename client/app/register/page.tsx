@@ -39,7 +39,7 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-            
+
             {/* Background Accents */}
             <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full point-events-none opacity-50" />
             <div className="absolute bottom-[-15%] left-[-10%] w-[45%] h-[45%] bg-secondary/20 blur-[120px] rounded-full point-events-none opacity-50" />
@@ -50,7 +50,7 @@ export default function Register() {
                         <Code2 size={24} className="text-primary" />
                     </div>
                     <h1 className="text-3xl font-extrabold text-white tracking-tight">Create Account</h1>
-                    <p className="text-text-muted text-sm font-medium tracking-tight">Join the next generation of collaborative coding.</p>
+                    <p className="text-text-muted text-sm font-medium tracking-tight">Join the CollabCode workspace.</p>
                 </div>
 
                 {error && (
@@ -67,7 +67,7 @@ export default function Register() {
                                 type="text"
                                 required
                                 className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border group-focus-within:border-primary/50 group-focus-within:ring-4 group-focus-within:ring-primary/10 rounded-xl outline-none text-sm transition-all text-white placeholder:text-gray-600 shadow-inner"
-                                placeholder="jeswa77"
+                                placeholder="john"
                                 value={formData.username}
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                             />
@@ -81,7 +81,7 @@ export default function Register() {
                                 type="email"
                                 required
                                 className="w-full pl-11 pr-4 py-3 bg-background/50 border border-border group-focus-within:border-primary/50 group-focus-within:ring-4 group-focus-within:ring-primary/10 rounded-xl outline-none text-sm transition-all text-white placeholder:text-gray-600 shadow-inner"
-                                placeholder="jeswa@example.com"
+                                placeholder="john@gmail.com"
                                 value={formData.email}
                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
@@ -128,8 +128,8 @@ export default function Register() {
                 </button>
 
                 <p className="text-center text-xs font-semibold text-text-muted pt-2 transition-all">
-                    Already part of the crew?{" "} 
-                    <a href="/login" className="text-primary hover:text-primary-hover hover:underline">Sign In</a>
+                    Already have an account?{" "}
+                    <a href="/login" className="text-primary hover:text-primary-hover hover:underline">Login</a>
                 </p>
             </div>
         </div>
