@@ -135,6 +135,12 @@ export const initializeSocket = (server: Httpserver) => {
             socket.to(to).emit("webrtc-ice-candidate", { candidate, from: socket.id });
         })
 
+        //We recive the cursor changes and send them to membersof the room 
+        // and they listen via frontend and updtaed by moanco editor
+        socket.on("send-cursor-awareness", ({ roomId, packet }) => {
+            socket.to(roomId).emit("receive-cursor-awareness", packet)
+        })
+
         // 5. Handling Disconnections
         // This fires right before the socket actually leaves its rooms
         socket.on("disconnecting", () => {
