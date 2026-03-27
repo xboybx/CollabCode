@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import React from 'react';
+import { Code2 } from "lucide-react";
 
 export default function Login() {
   const router = useRouter();
@@ -38,95 +39,100 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="glass-panel w-full max-w-md p-8 space-y-8 animate-slide-up">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-text-main tracking-tight">
-            Welcome Back
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      
+      {/* Dynamic Background Accents */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full point-events-none opacity-50" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 blur-[120px] rounded-full point-events-none opacity-50" />
+
+      <div className="glass-panel w-full max-w-md p-8 sm:p-10 space-y-8 animate-slide-up z-10">
+        
+        {/* Logo and Greeting */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 border border-primary/20 rounded-2xl mb-2">
+            <Code2 size={24} className="text-primary" />
+          </div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">
+            Sync Space
           </h1>
-          <p className="text-text-muted mt-2">
+          <p className="text-text-muted text-sm font-medium">
             Log in to your collaborative workspace.
           </p>
         </div>
 
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg text-sm text-center">
+          <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs font-semibold text-center animate-shake">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-text-muted ml-1">
-              Email
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5 focus-within:translate-x-1 transition-transform duration-200">
+            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">
+              Work Email
             </label>
-            <input
-              type="email"
-              required
-              className="w-full px-4 py-3 bg-surface border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary outline-none text-text-main"
-              placeholder="jeswa@example.com"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-            />
+            <div className="relative group">
+              <input
+                type="email"
+                required
+                className="w-full pl-12 pr-4 py-3.5 bg-background/50 border border-border group-focus-within:border-primary/50 group-focus-within:ring-4 group-focus-within:ring-primary/10 rounded-xl outline-none text-sm transition-all text-white placeholder:text-gray-600 shadow-inner"
+                placeholder="developer@example.com"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-text-muted ml-1">
+          <div className="space-y-1.5 focus-within:translate-x-1 transition-transform duration-200">
+            <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest ml-1">
               Password
             </label>
-            <input
-              type="password"
-              required
-              className="w-full px-4 py-3 bg-surface border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary outline-none text-text-main"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-            />
+            <div className="relative group">
+              <input
+                type="password"
+                required
+                className="w-full pl-12 pr-4 py-3.5 bg-background/50 border border-border group-focus-within:border-primary/50 group-focus-within:ring-4 group-focus-within:ring-primary/10 rounded-xl outline-none text-sm transition-all text-white placeholder:text-gray-600 shadow-inner"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl transition-all disabled:opacity-50 shadow-[0_0_20px_rgba(139,92,246,0.3)]"
+            className="group relative w-full overflow-hidden py-4 bg-primary hover:bg-primary-hover text-black font-bold rounded-xl transition-all disabled:opacity-50 shadow-[0_4px_20px_rgba(177,255,0,0.2)] active:scale-[0.98] mt-2"
           >
-            {loading ? "Verifying..." : "Login"}
+            <div className="relative z-10 flex items-center justify-center gap-2">
+              {loading ? "Verifying..." : "Enter Workspace"}
+            </div>
+            {/* Glossy Overlay */}
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
           </button>
         </form>
 
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-surface px-2 text-text-muted">
-              Or continue with
-            </span>
-          </div>
+        <div className="relative flex items-center gap-3 opacity-40">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-[10px] uppercase tracking-[0.2em] font-bold">Social Login</span>
+          <div className="flex-1 h-px bg-border" />
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          <button
-            onClick={() => signIn("github", { callbackUrl: "/" })}
-            className="flex items-center justify-center px-4 py-2 border border-border rounded-xl hover:bg-surface transition-all text-sm font-medium"
-          >
-            GitHub
-          </button>
-          {/* <button
-            onClick={() => signIn("google", { callbackUrl: "/" })}
-            className="flex items-center justify-center px-4 py-2 border border-border rounded-xl hover:bg-surface transition-all text-sm font-medium"
-          >
-            Google
-          </button> */}
-        </div>
+        <button
+          onClick={() => signIn("github", { callbackUrl: "/" })}
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-border bg-white/5 hover:bg-white/10 rounded-xl transition-all text-sm font-semibold active:scale-[0.98]"
+        >
+          <span>Continue with GitHub</span>
+        </button>
 
-        <p className="text-center text-sm text-text-muted">
-          New here?{" "}
-          <a href="/register" className="text-primary hover:underline">
-            Create an account
+        <p className="text-center text-xs font-semibold text-text-muted">
+          New to Sync Space?{" "}
+          <a href="/register" className="text-primary hover:text-primary-hover hover:underline transition-all">
+            Join Launchpad
           </a>
         </p>
       </div>

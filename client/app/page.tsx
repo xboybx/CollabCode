@@ -28,73 +28,89 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-background text-text-main relative overflow-hidden">
+    <div className="h-screen w-screen flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-primary/30">
 
-      {/* Background Decorative Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full point-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 blur-[120px] rounded-full point-events-none" />
+      {/* Background Decorative Blobs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[150px] rounded-full point-events-none opacity-40 animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/20 blur-[150px] rounded-full point-events-none opacity-40 animate-pulse" />
 
-      <div className="w-full max-w-md p-8 bg-surface/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl flex flex-col gap-8 text-center animate-slide-up z-10 relative">
+      <div className="w-full max-w-md p-8 sm:p-10 glass-panel flex flex-col gap-10 text-center animate-slide-up z-10 relative">
 
-        {/* Header Section */}
+        {/* Top Header Bar */}
         <div className="flex justify-between items-center w-full">
-          <div className="flex items-center gap-2">
-            <Code2 size={24} className="text-primary" />
-            <h1 className="text-xl font-bold tracking-tight">Sync Space</h1>
+          <div className="flex items-center gap-2 group cursor-default">
+            <div className="w-10 h-10 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-all">
+              <Code2 size={24} className="text-primary" />
+            </div>
+            <div className="flex flex-col items-start translate-y-0.5">
+              <h1 className="text-xl font-black tracking-tighter text-white leading-none">SYNC SPACE</h1>
+              <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Launchpad v1.0</span>
+            </div>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="p-2 text-text-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-400/10 border border-white/5 rounded-xl transition-all shadow-inner group"
             title="Sign Out"
           >
-            <LogOut size={18} strokeWidth={2.5} />
+            <LogOut size={18} strokeWidth={2.5} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
         </div>
 
-        {/* User Greet */}
-        <div className="text-left bg-background/50 border border-border/50 p-4 rounded-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-primary/20 flex flex-col items-center justify-center text-primary font-bold shadow-inner">
+        {/* User Presence Section */}
+        <div className="text-left bg-white/5 border border-white/5 p-5 rounded-2xl flex items-center gap-4 group hover:bg-white/10 transition-all cursor-default">
+          <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary/30 to-secondary/30 border border-white/10 flex items-center justify-center text-primary font-black text-xl shadow-lg ring-4 ring-white/5">
             {session?.user?.name?.charAt(0) || "U"}
           </div>
-          <div className="flex flex-col">
-            <p className="text-text-muted text-xs uppercase tracking-wider font-semibold">Welcome back</p>
-            <h2 className="text-lg font-bold text-white">{session?.user?.name || "Developer"}</h2>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <p className="text-gray-400 text-[10px] uppercase tracking-widest font-black">Online Presence</p>
+            </div>
+            <h2 className="text-xl font-black text-white truncate max-w-[200px] tracking-tight">{session?.user?.name || "Developer"}</h2>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-5 mt-2">
+        {/* Main Action Area */}
+        <div className="flex flex-col gap-6 mt-2 relative">
 
           <button
             onClick={createNewWorkspace}
-            className="group flex items-center justify-center gap-2 w-full bg-primary hover:bg-primary-hover text-white py-3.5 rounded-xl font-semibold text-[15px] transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] active:scale-[0.98]"
+            className="group relative flex items-center justify-center gap-3 w-full bg-primary hover:bg-primary-hover text-black py-4.5 rounded-2xl font-black text-[16px] transition-all shadow-[0_4px_30px_rgba(177,255,0,0.25)] hover:shadow-[0_8px_40px_rgba(177,255,0,0.4)] active:scale-[0.98] z-10"
           >
-            <Plus size={20} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-300" />
-            Create New Workspace
+            <Plus size={22} strokeWidth={4} className="group-hover:rotate-90 transition-transform duration-500" />
+            CREATE NEW ROOM
+            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-white/10 to-transparent pointer-events-none rounded-b-2xl" />
           </button>
 
-          <div className="flex items-center gap-3 opacity-60">
-            <div className="flex-1 h-px bg-border"></div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-text-muted font-bold">Or Join Session</span>
-            <div className="flex-1 h-px bg-border"></div>
+          <div className="flex items-center gap-4 opacity-40 py-2">
+            <div className="flex-1 h-px bg-white/10"></div>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500">Teleport</span>
+            <div className="flex-1 h-px bg-white/10"></div>
           </div>
 
-          <form onSubmit={joinExistingRoom} className="flex gap-2">
-            <input
-              name="roomId"
-              type="text"
-              placeholder="Paste Room ID or URL..."
-              required
-              className="flex-1 bg-background border border-border rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent text-text-main shadow-inner transition-shadow"
-            />
+          <form onSubmit={joinExistingRoom} className="flex gap-2 group/form">
+            <div className="relative flex-1 group/input">
+              <input
+                name="roomId"
+                type="text"
+                placeholder="Enter Room Code..."
+                required
+                className="w-full bg-white/5 border border-white/5 group-focus-within/form:border-white/10 rounded-2xl px-6 py-4.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 text-white shadow-inner transition-all placeholder:text-gray-600 font-medium"
+              />
+            </div>
             <button
               type="submit"
-              className="bg-surface hover:bg-neutral-800 border border-border text-text-main hover:text-white px-5 rounded-xl font-semibold text-sm transition-all active:scale-[0.96]"
+              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-6 rounded-2xl font-black text-sm transition-all active:scale-[0.96] flex items-center justify-center group/btn"
             >
-              Join
+              JOIN
             </button>
           </form>
 
+        </div>
+
+        {/* Subtle Footer Tag */}
+        <div className="flex items-center justify-center gap-1.5 opacity-30">
+          <p className="text-[9px] font-black tracking-widest uppercase text-primary">Encrypted Session Ready</p>
         </div>
       </div>
     </div>
