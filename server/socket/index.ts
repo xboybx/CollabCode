@@ -141,6 +141,11 @@ export const initializeSocket = (server: Httpserver) => {
             socket.to(roomId).emit("receive-cursor-awareness", packet)
         })
 
+        // Sync language across the room
+        socket.on("language-change", ({ roomId, language }) => {
+            socket.to(roomId).emit("language-change", language)
+        })
+
         // 5. Handling Disconnections
         // This fires right before the socket actually leaves its rooms
         socket.on("disconnecting", () => {

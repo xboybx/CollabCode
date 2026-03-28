@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import React from "react";
 import Editor from "@monaco-editor/react";
-import { MessageSquarePlus, Video, Play, LogOut, Home, Wand2, Languages, Book, Users, FileCode2, ChevronRight, Menu, Copy, PhoneCall } from "lucide-react";
+import { MessageSquarePlus, Video, Play, LogOut, Home, Wand2, Languages, Book, Users, FileCode2, ChevronRight, Menu, Copy, PhoneCall, Terminal as LucideTerminal } from "lucide-react";
 
 import ChatSidebar from "@/components/ChatSidebar";
 import VideoBubble from "@/components/VideoBubble";
@@ -14,6 +14,7 @@ import * as Y from "yjs";
 import { useRingtone } from "@/hooks/useRingtone";
 import { setupCursorStyles } from "@/hooks/useCursorStyles";
 import { setupCursorObserver } from "@/hooks/useCursorObserver";
+import Terminal from "@/components/Terminal";
 
 
 interface ChatMessage {
@@ -21,6 +22,18 @@ interface ChatMessage {
     senderName: string;
     message: string;
 }
+
+const languageExtensions: Record<string, string> = {
+    javascript: "js",
+    typescript: "ts",
+    python: "py",
+    java: "java",
+    cpp: "cpp",
+    go: "go",
+    rust: "rs",
+    html: "html",
+    css: "css",
+};
 
 
 export default function RoomEditor() {
@@ -80,6 +93,14 @@ export default function RoomEditor() {
 
     const { playRingtone, stopRingtone } = useRingtone();
 
+    /* Terminal Variables */
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [executionOutput, setExecutionOutput] = useState<string | null>(null);
+    const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+    const [terminalHeight, setTerminalHeight] = useState(220); // Default height in pixels
+
+
+
     //socket io initial connection and message recieving
     useEffect(() => {
         if (!roomId) return;
@@ -125,6 +146,10 @@ export default function RoomEditor() {
 
 
 
+        socket.on("language-change", (newLang: string) => {
+            setLanguage(newLang);
+        });
+
         socket.on("disconnect", () => {
             console.log("Disconnected from server.");
         });
@@ -133,6 +158,7 @@ export default function RoomEditor() {
             socket.off("receive-chat-message");
             socket.off("video-call-started");
             socket.off("video-call-ended");
+            socket.off("language-change");
             stopRingtone();
             socket.disconnect();
         };
@@ -250,7 +276,66 @@ export default function RoomEditor() {
 
     }, [socketRef, editorRef, roomId])
 
+    // Resizing Terminal logic
+    const startResizingTerminal = React.useCallback((mouseDownEvent: React.MouseEvent) => {
+        const startY = mouseDownEvent.clientY;
+        const startHeight = terminalHeight;
 
+        const onMouseMove = (mouseMoveEvent: MouseEvent) => {
+            const deltaY = startY - mouseMoveEvent.clientY; // Moving up increases height
+            const newHeight = Math.max(100, Math.min(600, startHeight + deltaY));
+            setTerminalHeight(newHeight);
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener("mousemove", onMouseMove);
+            document.removeEventListener("mouseup", onMouseUp);
+        };
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+    }, [terminalHeight]);
+
+
+    const handleRunCode = async () => {
+        //get the code from efitor ref 
+        const currentcode = editorRef.getValue()
+
+        //get the language
+        const currentlanguage = language;
+
+        setIsExecuting(true);
+        setIsTerminalOpen(true); // Open the terminal
+        setExecutionOutput("Executing code... please wait.");
+
+        try {
+            const res = await fetch("/api/execute", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    code: currentcode,
+                    language: currentlanguage
+                })
+            })
+            console.log("The api execute rote has hit and data sent frontend");
+
+
+            const data = await res.json();
+            console.log("The data to fronted at end: ", data)
+            if (data.success) {
+                setExecutionOutput(data.error || data.output || "program finished with no output")
+                console.log("Success! Check your browser console to see the output.");
+            } else {
+                setExecutionOutput(`System Error: ${data.error}`);
+            }
+
+        } catch (err) {
+            console.error("code Execution failed: ", err)
+        } finally {
+            setIsExecuting(false)
+        }
+
+    }
 
     return (
         <div className="h-screen w-screen flex bg-[#0d0e15] text-text-main overflow-hidden relative selection:bg-[#b1ff00]/30">
@@ -276,7 +361,7 @@ export default function RoomEditor() {
                             className="flex items-center gap-2 bg-[#1a1c29]/90 border-t border-x border-[#1a1c29] rounded-t-lg px-4 py-2 mt-2 h-[calc(100%-8px)] shadow-[0_-2px_10px_rgba(0,0,0,0.2)] hover:bg-white/5 transition-colors group"
                         >
                             <FileCode2 size={13} className="text-[#b1ff00]" />
-                            <span className="text-xs text-gray-300 font-mono tracking-wider">{roomId}</span>
+                            <span className="text-xs text-gray-300 font-mono tracking-wider">main.{languageExtensions[language] || "js"}</span>
                             <Copy size={11} className="text-gray-500 group-hover:text-[#b1ff00] transition-colors ml-1" />
                         </button>
                     </div>
@@ -418,7 +503,13 @@ export default function RoomEditor() {
                         {/* Language Selection moved to the Left */}
                         <select
                             value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
+                            onChange={(e) => {
+                                const newLang = e.target.value;
+                                setLanguage(newLang);
+                                if (socketRef) {
+                                    socketRef.emit("language-change", { roomId, language: newLang });
+                                }
+                            }}
                             className="appearance-none px-4 py-1.5 ml-1 rounded-full bg-[#1e2030] outline outline-1 outline-white/10 text-[10px] font-bold tracking-widest uppercase text-[#b1ff00] focus:outline-none focus:outline-[#b1ff00]/50 cursor-pointer hover:bg-white/10 transition-all shadow-inner"
                         >
                             <option value="javascript">JavaScript</option>
@@ -434,8 +525,18 @@ export default function RoomEditor() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0 ml-4">
+                        {/* Terminal Toggle Button */}
+                        <button
+                            onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                            className={`p-1.5 rounded-md transition-all border ${isTerminalOpen ? 'text-[#b1ff00] bg-[#b1ff00]/10 border-[#b1ff00]/30' : 'text-gray-400 hover:text-white bg-white/5 border-white/5 hover:border-white/10'}`}
+                            title="Toggle Terminal"
+                        >
+                            <LucideTerminal size={16} />
+                        </button>
+
                         {/* The shiny new Run Code button placed firmly on the Right */}
-                        <button className="flex items-center gap-1.5 bg-[#b1ff00]/10 hover:bg-[#b1ff00]/20 border border-[#b1ff00]/50 text-[#b1ff00] px-5 py-1.5 rounded-md text-[11px] font-bold tracking-wider transition-all shadow-[0_0_15px_rgba(177,255,0,0.1)] hover:shadow-[0_0_20px_rgba(177,255,0,0.2)]">
+                        <button className="flex items-center gap-1.5 bg-[#b1ff00]/10 hover:bg-[#b1ff00]/20 border border-[#b1ff00]/50 text-[#b1ff00] px-5 py-1.5 rounded-md text-[11px] font-bold tracking-wider transition-all shadow-[0_0_15px_rgba(177,255,0,0.1)] hover:shadow-[0_0_20px_rgba(177,255,0,0.2)]"
+                            onClick={handleRunCode}>
                             <Play size={13} fill="currentColor" />
                             Run Code
                         </button>
@@ -452,7 +553,7 @@ export default function RoomEditor() {
                         <ChevronRight size={10} />
                         <div className="flex items-center gap-1.5 text-gray-300 cursor-pointer hover:text-white transition-colors">
                             <FileCode2 size={11} className="text-[#b1ff00]" />
-                            <span>main.{language === "javascript" ? "js" : language === "typescript" ? "ts" : language === "python" ? "py" : "js"}</span>
+                            <span>main.{languageExtensions[language] || "js"}</span>
                         </div>
                     </div>
 
@@ -461,11 +562,40 @@ export default function RoomEditor() {
                             height="100%"
                             language={language}
                             theme="vs-dark"
-
                             onMount={(editor => setEditorRef(editor))}
-                            options={{ minimap: { enabled: false }, fontSize: 14, wordWrap: 'on', padding: { top: 8 }, smoothScrolling: true, cursorBlinking: "smooth" }}
+                            options={{
+                                minimap: { enabled: false },
+                                fontFamily: "var(--font-jetbrains-mono), monospace",
+                                fontSize: 16,
+                                lineHeight: 24,
+                                fontLigatures: true,
+                                wordWrap: 'on',
+                                padding: { top: 12 },
+                                smoothScrolling: true,
+                                cursorBlinking: "smooth"
+                            }}
                         />
                     </div>
+
+                    {isTerminalOpen && (
+                        <div
+                            style={{ height: `${terminalHeight}px` }}
+                            className="absolute bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/10 flex flex-col z-50 animate-in slide-in-from-bottom  shadow-[0_-15px_40px_rgba(0,0,0,0.8)]"
+                        >
+                            {/* Resize Handle */}
+                            <div
+                                onMouseDown={startResizingTerminal}
+                                className="absolute top-0 left-0 right-0 h-1 cursor-ns-resize hover:bg-[#b1ff00]/40 transition-colors z-[60]"
+                            />
+
+                            <Terminal
+                                isOpen={isTerminalOpen}
+                                onClose={() => setIsTerminalOpen(false)}
+                                output={executionOutput}
+                                isExecuting={isExecuting}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
             <ChatSidebar isOpen={isChatOpen} socket={socketRef} roomId={roomId} chatWidth={chatWidth} startResizing={startResizing} onClose={() => setIsChatOpen(false)} messages={messages} setMessages={setMessages} />
