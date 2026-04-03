@@ -1,8 +1,8 @@
-# Tounge Compiler - Collaborative Real-Time Code Editor
+# Collab Code - Collaborative Real-Time Code Workspace
 
-![Tounge Compiler Preview](https://ik.imagekit.io/mtkm3escy/collab%20cide.png)
+![Collab Code Preview](https://ik.imagekit.io/mtkm3escy/collab%20cide.png)
 
-Welcome to **Tounge Compiler**, a premium, high-performance web application designed for real-time collaborative coding, communication, and immediate code execution. Designed with a striking "Neon-Dark" aesthetic and powered by an advanced multi-engine execution pipeline, it provides an unparalleled developer experience.
+Welcome to **Collab Code**, a premium, high-performance web application designed for real-time collaborative coding, where multiple users can join a room to edit code simultaneously, execute it instantly, and communicate through integrated video calls and chat features. Designed with a striking "Neon-Dark" aesthetic, it provides an unparalleled developer experience.
 
 ## ✨ Key Features
 
@@ -19,8 +19,9 @@ Welcome to **Tounge Compiler**, a premium, high-performance web application desi
 - Contains an automated smart fallback mechanism switching smoothly to a keyless **Wandbox API** to ensure continuous availability even out of quota.
 - Output is rendered nicely within a custom resizable, neon-styled terminal directly underneath the editor.
 
-### 🤖 AI Analysis & Chat Integration
-- An integrated AI helper sidebar docked on the left, assisting developers in understanding code, fixing bugs, and optimizing logic on-the-fly.
+### 💬 Real-Time Collaboration & Chat
+- Stay connected with your team via integrated real-time text chat designed for fast communication within the room.
+- Synchronized cursors and multi-user presence ensure a fluid collaborative experience without friction.
 
 ### 🎨 Premium "Neon-Dark" UI & Glassmorphism
 - A stunning user interface built utilizing **TailwindCSS (v4)**.
