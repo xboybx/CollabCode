@@ -99,6 +99,12 @@ export const initializeSocket = (server: Httpserver) => {
             socket.to(roomId).emit("receive-crdt-packet", packet)
         })
 
+        // Initial State Sync: Receive the complete document state from an existing user 
+        // and route it directly to the newly joined user so they can catch up immediately
+        socket.on("send-sync-state", ({ to, packet }) => {
+            socket.to(to).emit("receive-sync-state", packet)
+        })
+
 
         /*
         =====================================================================

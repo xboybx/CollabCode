@@ -227,6 +227,21 @@ export default function RoomEditor() {
             Y.applyUpdate(ydoc, rawBinary, "server");
         });
 
+        // 6. INITIAL SYNC SENDER: When a new user joins, send them our entire current YDoc history!
+        const handleUserConnected = (newUserId: string) => {
+            // Encode the *full* current history of our code
+            const fullState = Y.encodeStateAsUpdate(ydoc);
+            // Send it ONLY to the newly connected user's Walkie-Talkie
+            socketRef.emit("send-sync-state", { to: newUserId, packet: Array.from(fullState) });
+        };
+        socketRef.on("user-connected", handleUserConnected);
+
+        // 7. INITIAL SYNC RECEIVER: When WE are the new user, we receive the massive state timeline
+        const handleReceiveSyncState = (incomingPacket: number[]) => {
+            const rawBinary = new Uint8Array(incomingPacket);
+            Y.applyUpdate(ydoc, rawBinary, "server");
+        };
+        socketRef.on("receive-sync-state", handleReceiveSyncState);
 
         // --- SYNC CURSORS (AWARENESS) ---
         // When your cursor moves, this fires. We broadcast the movement binary.
@@ -260,6 +275,8 @@ export default function RoomEditor() {
 
         return () => {
             socketRef.off("receive-crdt-packet");
+            socketRef.off("user-connected", handleUserConnected);
+            socketRef.off("receive-sync-state", handleReceiveSyncState);
             socketRef.off("receive-cursor-awareness");
             cleanupStyles();
             cleanupObserver();
