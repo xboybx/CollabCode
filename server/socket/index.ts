@@ -1,7 +1,6 @@
 //Socket file , where we wrap the expresss app unto it to have https methods
 import { Server } from "socket.io";
 import { Server as Httpserver } from "http";
-import { Socket } from "dgram";
 
 export const initializeSocket = (server: Httpserver) => {
     // 1. Initialize the Socket.io server
@@ -104,6 +103,7 @@ export const initializeSocket = (server: Httpserver) => {
         socket.on("send-sync-state", ({ to, packet }) => {
             socket.to(to).emit("receive-sync-state", packet)
         })
+
 
 
         /*
