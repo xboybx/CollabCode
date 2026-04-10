@@ -5,6 +5,8 @@ import { MessageSquare, X, Send, Sparkles } from "lucide-react";
 import { useSession } from "next-auth/react";
 import RoomChat from "./RoomChat";
 import AIChat from "./AIChat";
+import { Socket } from "socket.io-client";
+
 interface ChatMessage {
   senderId: string;
   senderName: string;
@@ -15,11 +17,11 @@ interface SideChatPanelProps {
   chatWidth: number;
   startResizing: (e: React.MouseEvent) => void;
   onClose: () => void;
-  socket: any;     // Accepting the TCP Pipe!
-  roomId: string;  // Accepting the Room Bucket!
+  socket: Socket | null; // Use the imported Socket type, allow null
+  roomId: string;
   messages: ChatMessage[];
-  setMessages: any;
-  isOpen: boolean; // Controls the slide animation
+  setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>; // Correct type for set state
+  isOpen: boolean;
 }
 
 
@@ -40,13 +42,13 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
 
     // Build the message object
     const newMsg: ChatMessage = {
-      senderId: socket.id,
+      senderId: socket.id, // We can be sure socket is not null here because of the check above
       senderName: userName,
       message: currentText,
     };
 
     // 1. Add it to our own screen immediately
-    setMessages((prev: any) => [...prev, newMsg]);
+    setMessages((prev) => [...prev, newMsg]);
 
     // 2. Scream it down the pipe to the backend!
     socket.emit("send-chat-message", { roomId, message: currentText, senderName: userName });
@@ -56,25 +58,29 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
   };
 
 
-  const SendAITabMessages = async () => {
+  const handleAiChatSubmit = async () => {
     if (!aiCurrentText.trim() || !socket) return;
+
+
+    //build user message object to add to the AI Chat tab immediately
+    const newMsg: ChatMessage = {
+      senderId: socket?.id || 'user',
+      senderName: userName,
+      message: aiCurrentText,
+    };
+
+    //push the user message to the AIMessages Array
+    setAiTabMessages((prev) => [...prev, newMsg]);
+    const messageToSend = aiCurrentText;
+    // Clear the input
+    setAICurrentText("");
+
     try {
-
-      //build user message object to add to the AI Chat tab immediately
-      const newMsg: ChatMessage = {
-        senderId: socket.id,
-        senderName: userName,
-        message: aiCurrentText,
-      };
-
-      //push the user message to the AIMessages Array
-      setAiTabMessages((prev) => [...prev, newMsg]);
-
 
       const response = await fetch("/api/aiResponse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: aiCurrentText }),
+        body: JSON.stringify({ message: messageToSend }),
       })
 
       if (!response.ok) {
@@ -101,8 +107,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
       setAiTabMessages((prev) => [...prev, aiResponseMsg]);
 
 
-      // Clear the input
-      setAICurrentText("");
+
 
     } catch (err) {
       console.error("Error fetching AI response:", err);
@@ -146,23 +151,6 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
         </button>
       </div>
 
-      {/*  Message History (Loops infinitely through the array and displays messages) */}
-      {/* <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent">
-        {messages.map((msg, idx) => {
-          const isMe = msg.senderId === socket?.id;
-          return (
-            <div key={idx} className={`flex flex-col gap-1.5 ${isMe ? "items-end" : "items-start"}`}>
-              <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold ml-1 mr-1">
-                {isMe ? "You" : msg.senderName}
-              </span>
-              <div className={`px-4 py-2.5 text-sm backdrop-blur-md shadow-sm ${isMe ? 'bg-primary/30 border border-primary/40 text-blue-50 rounded-2xl rounded-tr-sm shadow-[0_4px_20px_rgba(99,102,241,0.25)]' : 'bg-white/10 border border-white/10 text-gray-100 rounded-2xl rounded-tl-sm'}`}>
-                {msg.message}
-              </div>
-            </div>
-          );
-        })}
-      </div> */}
-
       <div className="flex-1 min-h-0">
         {activeTab === "ai" ? (<AIChat aiMessages={aiTabmessages} socket={socket} />) : (<RoomChat setMessages={setMessages} messages={messages} socket={socket} />)}
       </div>
@@ -179,14 +167,14 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
             }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                activeTab === "ai" ? SendAITabMessages() : sendMessage();
+                activeTab === "ai" ? handleAiChatSubmit() : sendMessage();
               }
             }
             }
             placeholder="Message the team..."
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:bg-white/10 transition-all text-white placeholder-gray-500 shadow-inner"
           />
-          <button onClick={activeTab === "ai" ? SendAITabMessages : sendMessage} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-primary to-indigo-500 hover:brightness-110 rounded-lg text-white transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)]">
+          <button onClick={activeTab === "ai" ? handleAiChatSubmit : sendMessage} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-primary to-indigo-500 hover:brightness-110 rounded-lg text-white transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)]">
             <Send size={16} />
           </button>
         </div>
