@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 
-/* This Route Executes the Code and Returns the Output */
+/**
+ * Execute submitted source code via the Wandbox API and return the execution result.
+ *
+ * @param req - HTTP request whose JSON body must include `code` (source string) and `language` (one of the supported language keys)
+ * @returns An object containing `success`, `output`, `error`, and `language` that describe the execution outcome
+ */
 export async function POST(req: Request) {
 
     const WANDBOX_API = 'https://wandbox.org/api/compile.json';
