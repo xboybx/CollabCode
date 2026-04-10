@@ -57,7 +57,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
 
 
   const SendAITabMessages = async () => {
-    if (!aiCurrentText.trim()) return;
+    if (!aiCurrentText.trim() || !socket) return;
     try {
 
       //build user message object to add to the AI Chat tab immediately

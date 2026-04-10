@@ -25,8 +25,7 @@ interface AIChatProps {
 export default function AIChat({ aiMessages = [], socket }: AIChatProps) {
     const { data: session } = useSession();
     const userName = session?.user?.name || "Developer";
-    console.log("Rendering AIChat with messages:", aiMessages);
-    console.log("Current socket ID:", socket?.id);
+
 
     return (
         <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent">
