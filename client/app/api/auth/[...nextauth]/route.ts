@@ -14,6 +14,7 @@ const handler = NextAuth({
             clientId: process.env.GITHUB_ID as string,
             clientSecret: process.env.GITHUB_SECRET as string,
             allowDangerousEmailAccountLinking: true,
+            issuer: "https://github.com/login/oauth",
         }),
         GoogleProvider({
             clientId: process.env.GOOGLE_ID as string,
@@ -30,7 +31,7 @@ const handler = NextAuth({
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error("Missing Credentials")
                 }
-                
+
                 const client = await clientPromise;
                 const db = client.db()
                 const user = await db.collection("users").findOne({ email: credentials.email })
