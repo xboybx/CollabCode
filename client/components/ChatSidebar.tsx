@@ -1,3 +1,11 @@
+/**
+ * ChatSidebar Component
+ * 
+ * Manages the state for Room and AI chats.
+ * Recent Updates:
+ * - Added `isAiThinking` state to track AI response status.
+ * - Integrated thinking loader state into the AI chat submission flow.
+ */
 "use client";
 
 import React, { act, useState } from "react";
@@ -34,6 +42,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
   const [currentText, setCurrentText] = useState("");
   const [aiCurrentText, setAICurrentText] = useState("");
   const [aiTabmessages, setAiTabMessages] = useState<ChatMessage[]>([]);
+  const [isAiThinking, setIsAiThinking] = useState(false);
 
 
 
@@ -74,6 +83,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
     const messageToSend = aiCurrentText;
     // Clear the input
     setAICurrentText("");
+    setIsAiThinking(true);
 
     try {
 
@@ -109,9 +119,8 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
 
 
 
-    } catch (err) {
-      console.error("Error fetching AI response:", err);
-
+    } finally {
+      setIsAiThinking(false);
     }
 
   }
@@ -152,7 +161,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">
-        {activeTab === "ai" ? (<AIChat aiMessages={aiTabmessages} socket={socket} />) : (<RoomChat setMessages={setMessages} messages={messages} socket={socket} />)}
+        {activeTab === "ai" ? (<AIChat aiMessages={aiTabmessages} isThinking={isAiThinking} socket={socket} />) : (<RoomChat setMessages={setMessages} messages={messages} socket={socket} />)}
       </div>
 
 

@@ -1,7 +1,15 @@
+/**
+ * RoomChat Component
+ * 
+ * Handles real-time messaging between collaborators in a room.
+ * Recent Updates:
+ * - Added a Collaborative Chat welcome card for new/empty conversations.
+ * - Included feature highlights and helpful instructions for users.
+ */
 "use client";
 
 import React, { useState } from "react";
-import { MessageSquare, X, Send } from "lucide-react";
+import { MessageSquare, X, Send, Users, ShieldCheck, Zap } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 interface ChatMessage {
@@ -28,7 +36,38 @@ export default function RoomChat({ socket, messages }: RoomChatProps) {
 
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent h-full">
+            {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                    <div className="relative">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-indigo-500/50 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative p-4 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
+                            <Users className="w-10 h-10 text-primary" />
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <h3 className="text-xl font-bold text-white tracking-tight">
+                            Collaborative Chat
+                        </h3>
+                        <p className="text-sm text-gray-400 leading-relaxed max-w-[240px] mx-auto">
+                            Chat with your collaborators here in real-time. Share code snippets and brainstorm ideas together!
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 w-full max-w-[240px]">
+                        <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl text-left">
+                            <ShieldCheck size={16} className="text-primary" />
+                            <span className="text-[12px] text-gray-300 font-medium">Secure End-to-End</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl text-left">
+                            <Zap size={16} className="text-primary" />
+                            <span className="text-[12px] text-gray-300 font-medium">Real-time sync</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {messages.map((msg, idx) => {
                 const isMe = msg.senderId === socket?.id;
                 return (

@@ -1,7 +1,15 @@
+/**
+ * AIChat Component
+ * 
+ * Displays the AI conversation history and thinking state.
+ * Recent Updates:
+ * - Added a minimal "black and white" gradient thinking loader.
+ * - Implemented an introductory welcome card for empty chat states.
+ */
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { MessageSquare, X, Send } from "lucide-react";
+import { MessageSquare, X, Send, Sparkles, Terminal, Code2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -19,7 +27,8 @@ interface ChatMessage {
 
 interface AIChatProps {
     aiMessages: ChatMessage[];
-    socket: Socket | null;
+    socket?: Socket | null;
+    isThinking?: boolean;
 }
 
 // Custom Code component for react-markdown with proper typing
@@ -41,13 +50,44 @@ const CodeBlock: React.FC<CodeProps> = ({ node, inline, className, children, ...
     );
 };
 
-export default function AIChat({ aiMessages = [] }: AIChatProps) {
+export default function AIChat({ aiMessages = [], isThinking = false }: AIChatProps) {
     const { data: session } = useSession();
     const userName = session?.user?.name || "Developer";
 
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 no-scrollbar bg-transparent h-full">
+            {aiMessages.length === 0 && !isThinking && (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                    <div className="relative">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-indigo-500/50 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative p-4 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
+                            <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                        <h3 className="text-xl font-bold text-white tracking-tight">
+                            AI Chat Assistant
+                        </h3>
+                        <p className="text-sm text-gray-400 leading-relaxed max-w-[240px] mx-auto">
+                            Ask anything about the code you want. You can generate snippets and paste them directly into your editor.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 w-full max-w-[240px]">
+                        <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl text-left">
+                            <Code2 size={16} className="text-primary" />
+                            <span className="text-[12px] text-gray-300 font-medium">Generate code snippets</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl text-left">
+                            <Terminal size={16} className="text-primary" />
+                            <span className="text-[12px] text-gray-300 font-medium">Debug and explain logic</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {aiMessages.map((msg, idx) => {
                 const isMe = msg.senderName === userName;
                 return (
@@ -68,6 +108,19 @@ export default function AIChat({ aiMessages = [] }: AIChatProps) {
                     </div>
                 );
             })}
+            
+            {isThinking && (
+                <div className="flex flex-col gap-1.5 items-start animate-in fade-in slide-in-from-left-2 duration-500 mt-2">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold ml-1 mr-1">
+                        CodeGPT
+                    </span>
+                    <div className="ml-1">
+                        <span className="text-sm font-semibold bg-gradient-to-r from-white via-gray-300 to-black bg-clip-text text-transparent animate-pulse tracking-tight italic">
+                            Thinking...
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
