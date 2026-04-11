@@ -130,7 +130,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
       {/* Header */}
       <div className="h-14 bg-white/5 border-b border-white/10 flex items-center justify-between px-6 shrink-0">
         <div className="flex items-center gap-2 text-sm font-bold text-white drop-shadow-md">
-          <button className="flex justify-center items-center gap-2" onClick={() => {
+          <button className={`flex items-center gap-2 pb-1 transition-colors ${activeTab === 'room' ? 'text-white border-b-2 border-primary' : 'text-gray-400 hover:text-white'}`} onClick={() => {
             setActiveTab("room")
             console.log("Room Chat Tab Clicked")
           }}>
@@ -138,7 +138,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
             <h2>Room Chat</h2>
           </button>
           <br></br>
-          <button className="flex justify-center items-center gap-1" onClick={() => {
+          <button className={`flex items-center gap-1 pb-1 transition-colors ${activeTab === 'ai' ? 'text-white border-b-2 border-primary' : 'text-gray-400 hover:text-white'}`} onClick={() => {
             setActiveTab("ai")
             console.log("AI Chat Tab Clicked")
           }}>
