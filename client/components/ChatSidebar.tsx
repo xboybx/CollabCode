@@ -151,7 +151,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
         </button>
       </div>
 
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-auto">
         {activeTab === "ai" ? (<AIChat aiMessages={aiTabmessages} socket={socket} />) : (<RoomChat setMessages={setMessages} messages={messages} socket={socket} />)}
       </div>
 

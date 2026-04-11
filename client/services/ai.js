@@ -10,7 +10,7 @@ const openai = new OpenAI({
 });
 
 export const getAIResponse = async (message) => {
-    const model = "google/gemma-4-31b-it:free";
+    const model = "liquid/lfm-2.5-1.2b-thinking:free";
     // Debug: Check if API key exists
     if (!process.env.OPENROUTER_API_KEY) {
         throw new Error("OPENROUTER_API_KEY environment variable is not set");

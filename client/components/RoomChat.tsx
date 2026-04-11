@@ -24,8 +24,7 @@ interface RoomChatProps {
 export default function RoomChat({ socket, messages }: RoomChatProps) {
     const { data: session } = useSession();
     const userName = session?.user?.name || "Developer";
-    console.log("Rendering RoomChat with messages:", messages);
-    console.log("Current socket ID:", socket?.id);
+
 
 
     return (

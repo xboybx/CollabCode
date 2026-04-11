@@ -41,7 +41,7 @@ const CodeBlock: React.FC<CodeProps> = ({ node, inline, className, children, ...
     );
 };
 
-export default function AIChat({ aiMessages = [], socket }: AIChatProps) {
+export default function AIChat({ aiMessages = [] }: AIChatProps) {
     const { data: session } = useSession();
     const userName = session?.user?.name || "Developer";
 
