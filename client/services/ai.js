@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-    baseURL: 'https://openrouter.ai/api/v1',
-    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: process.env.AI_BASE_URL,
+    apiKey: process.env.AI_API_KEY,
     defaultHeaders: {
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL,
         "X-OpenRouter-Title": "Collaborative Coder",
@@ -10,9 +10,9 @@ const openai = new OpenAI({
 });
 
 export const getAIResponse = async (message) => {
-    const model = "liquid/lfm-2.5-1.2b-thinking:free";
+    const model = process.env.AI_MODE_NAME;
     // Debug: Check if API key exists
-    if (!process.env.OPENROUTER_API_KEY) {
+    if (!process.env.AI_API_KEY) {
         throw new Error("OPENROUTER_API_KEY environment variable is not set");
     }
 
