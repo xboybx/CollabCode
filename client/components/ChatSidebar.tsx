@@ -51,7 +51,7 @@ const ChatSidebar = ({ chatWidth, startResizing, onClose, socket, roomId, messag
 
     // Build the message object
     const newMsg: ChatMessage = {
-      senderId: socket.id, // We can be sure socket is not null here because of the check above
+      senderId: socket.id || "anonymous", // Fallback for socket.id which can be undefined
       senderName: userName,
       message: currentText,
     };

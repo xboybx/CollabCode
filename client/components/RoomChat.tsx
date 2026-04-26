@@ -19,14 +19,9 @@ interface ChatMessage {
 }
 
 interface RoomChatProps {
-    chatWidth: number;
-    startResizing: (e: React.MouseEvent) => void;
-    onClose: () => void;
-    socket: any;     // Accepting the TCP Pipe!
-    roomId: string;  // Accepting the Room Bucket!
+    socket: any;
     messages: ChatMessage[];
     setMessages: any;
-    isOpen: boolean; // Controls the slide animation
 }
 
 export default function RoomChat({ socket, messages }: RoomChatProps) {

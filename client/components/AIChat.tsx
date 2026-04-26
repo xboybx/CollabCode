@@ -16,7 +16,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import remarkGfm from "remark-gfm";
 
-import { CodeProps } from 'react-markdown/lib/ast-to-react';
 import { Socket } from 'socket.io-client';
 
 interface ChatMessage {
@@ -31,10 +30,10 @@ interface AIChatProps {
     isThinking?: boolean;
 }
 
-// Custom Code component for react-markdown with proper typing
-const CodeBlock: React.FC<CodeProps> = ({ node, inline, className, children, ...props }) => {
+// Custom Code component for react-markdown with proper typing for v10
+const CodeBlock = ({ node, className, children, ...props }: any) => {
     const match = /language-(\w+)/.exec(className || '');
-    return !inline && match ? (
+    return match ? (
         <SyntaxHighlighter
             style={vscDarkPlus}
             language={match[1]}
