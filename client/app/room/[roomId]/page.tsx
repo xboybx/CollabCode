@@ -125,7 +125,7 @@ export default function RoomEditor() {
             if (IncommingMessages.senderId !== socket.id) {
                 setHasNewMessage(true);
             }
-        })
+        });
 
         // Listen for incoming video call from another user in the room
         socket.on("video-call-started", ({ callerName }: { callerName: string }) => {
